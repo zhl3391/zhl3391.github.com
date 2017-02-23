@@ -35,9 +35,14 @@ render_drafts: false
 post_asset_folder: false
 relative_link: false
 highlight:
-  enable: true
-  line_number: true
-  tab_replace:
+  enable: false
+  line_number: false
+  tab_replace: false
+
+prism_plugin:
+  mode: 'preprocess'    # realtime/preprocess
+  theme: 'tomorrow'
+  line_number: false    # default false
 
 # Category & Tag
 default_category: uncategorized
