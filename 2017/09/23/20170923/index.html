@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+    <head>
+		
+        <meta http-equiv="Content-Type" content="text/html" charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="description" content="">
+        <link rel="shortcut icon" href="/asset/guolin.png"/>
+        <link rel="canonical" href="http://guolinn.com/">
+        <link rel="alternate" type="application/rss+xml" title="Kim" href="">
+        <title>Glide的centerCrop和fitCenter也是Transformation的一种 | kim&#39;s blog</title>
+        <meta name="description" content="{{meta_description}}">
+
+        <link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="/styles/crisp.css">
+        <meta name="HandheldFriendly" content="True" />
+        <meta name="MobileOptimized" content="320" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+
+    </head>
+    
+		<body class="post-template">
+	
+
+        <header id="header">
+            <a id="logo" href="/"><img src="/asset/guolin.png" alt="kim's blog" /></a>
+            <h1><a href="/">Kim</a></h1>
+            <p>渣渣 程序猿</p>
+            <div id="follow-icons">
+          <a href="http://github.com/zhl3391"><i class="fa fa-github-square fa-2x"></i></a>
+          </div>
+<h6><a href="/about">About</a></h6>
+        </header>
+
+        <main id="content">
+        
+
+<article class="post">
+  九月 23, 2017
+  
+    <span class="taglist">  &middot; 
+    
+    
+      <a href='/tags/Android/'>Android</a> 
+    
+    </span>
+  
+
+  <h1 class="post-title">Glide的centerCrop和fitCenter也是Transformation的一种</h1>
+  <section class="post-content article-entry">
+    <p>之前在用Glide加载图片并进行圆角转换是就把centerCrop方法和tranform方法一起调用，就像这样：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">Glide.with(context).load(url)</div><div class="line">                .asBitmap()</div><div class="line">                .centerCrop()</div><div class="line">                .transform(<span class="keyword">new</span> RoundedCornersTransformation(context,radius, <span class="number">0</span>))</div><div class="line">                .into(imageView);</div></pre></td></tr></table></figure>
+<p>结果图片并没有先被centerCrop再转圆角。于是看了下centerCrop方法的源码。发现也是调用transform方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">public</span> BitmapRequestBuilder&lt;ModelType, TranscodeType&gt; <span class="title">centerCrop</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">return</span> transform(glide.getBitmapCenterCrop());</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>再进到transform里一看就豁然开朗。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">public</span> GenericRequestBuilder&lt;ModelType, DataType, ResourceType, TranscodeType&gt; <span class="title">transform</span><span class="params">(</span></span></div><div class="line"><span class="function"><span class="params">            Transformation&lt;ResourceType&gt;... transformations)</span> </span>&#123;</div><div class="line">    <span class="keyword">if</span> (transformations.length == <span class="number">1</span>) &#123;</div><div class="line">    isTransformationSet = <span class="keyword">true</span>;</div><div class="line">        transformation = transformations[<span class="number">0</span>];</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">        transformation = <span class="keyword">new</span> MultiTransformation&lt;ResourceType&gt;(transformations);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">return</span> <span class="keyword">this</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>原来如果先调用centerCrop再调用其他的transform方法是会覆盖掉之前的centerCrop转换，所以centerCrop并没有产生效果。解决的办法就是在transform方法同时传入centerCrop和其他转换。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">Glide.with(<span class="keyword">this</span>).load(url)</div><div class="line">                .asBitmap()</div><div class="line">                .transform(<span class="keyword">new</span> CenterCrop(Glide.get(context).getBitmapPool()),</div><div class="line">                        <span class="keyword">new</span> RoundedCornersTransformation(context,radius, <span class="number">0</span>))</div><div class="line">                .into(imageView);</div></pre></td></tr></table></figure>
+
+  </section>
+  <footer class="post-footer">
+    <!--
+    <section class="author">
+      <h4>Kim</h4>
+      <p></p>
+    </section>
+    -->
+  </footer>
+</article>
+
+<nav class="pagination" role="pagination">
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2017/02/17/rdpm/">
+        <!--开发与产品如何协作--> next →
+    </a>
+    
+</nav>
+
+
+        </main>
+        <footer id="footer">
+            <section id="footer-message">&copy; 2017 Kim. All rights reserved. Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. <a href="https://github.com/guolin/crisp-hexo-theme" target="_blank">crisp</a> theme by <a href="guolin.github.io" target="_blank">Guo Lin</a>.</section>
+        </footer>
+    </body>
+</html>
+
+
